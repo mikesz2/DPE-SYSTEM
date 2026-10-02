@@ -1,0 +1,19 @@
+/* ============================== RESPONSIVE TWEAKS ========================= */
+@media (max-width:760px){
+  .medals-hero{ padding:32px 14px }
+  .medal-grid{ grid-template-columns:repeat(2,1fr) }
+  .ranking-podium{ flex-wrap:wrap; gap:10px }
+  .podium-block{ width:74px }
+  .news-grid{ grid-template-columns:1fr }
+  .req-type-grid{ grid-template-columns:1fr 1fr }
+  .theme-grid{ grid-template-columns:1fr }
+  .promo-card{ width:180px }
+}
+@media (max-width:480px){
+  .req-type-grid{ grid-template-columns:1fr }
+  .medal-grid{ grid-template-columns:1fr 1fr }
+  .login-panel{ padding:30px 22px }
+}
+@media print{
+  .sidebar,.topbar,.modal,.toast,.drawer{ display:none !important }
+}
