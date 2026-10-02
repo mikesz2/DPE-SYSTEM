@@ -1,0 +1,1020 @@
+// System DPE — schema do banco de dados (SQLite — arquivo único local)
+// Rodar: npx prisma db push
+//
+// Nota: o conector SQLite do Prisma não suporta o tipo "enum" nativo do
+// schema (isso é um recurso só de Postgres/MySQL/CockroachDB). Por isso,
+// campos que seriam enum (papel, status, tipo de mídia, canal...) são
+// String simples aqui, com os valores válidos documentados em comentário
+// e validados na camada de aplicação (controllers).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Hierarquia — Patentes e Divisões são registros configuráveis (não fixos no
+// código), assim o Alto Comando ajusta a estrutura sem precisar de deploy.
+// ============================================================================
+
+model Rank {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  level     Int      @unique // ordem hierárquica crescente — usado para checar "quem pode promover/rebaixar quem"
+  createdAt DateTime @default(now())
+
+  members Member[]
+  careerRequirements CareerRequirement[]
+}
+
+model Division {
+  id        Int      @id @default(autoincrement())
+  sig       String   @unique // AFD, COR, COE...
+  name      String
+  icon      String   @default("🛡️")
+  desc      String   @default("")
+  createdAt DateTime @default(now())
+
+  members       Member[]
+  leaders       DivisionLeader[]
+  documents     Document[]
+  announcements Announcement[]
+  institutionalEvents InstitutionalEvent[]
+}
+
+// role: "MEMBRO" | "MODERADOR" | "ADMINISTRADOR" | "DONO" | "SUPREMO"
+//   (ordem hierárquica de permissões — ver src/middleware/permissions.js)
+// status: "ATIVO" | "LICENCA" | "AFASTADO" | "EXPULSO" | "DESLIGADO"
+
+model Member {
+  id            Int            @id @default(autoincrement())
+  habboName     String         @unique // nome exato da conta no Habbo
+  habboUniqueId String         @unique // "uniqueId" da API do Habbo — estável mesmo se o nick mudar
+  passwordHash  String
+  sessionVersion Int           @default(0) // incrementado para invalidar tokens antigos após senha/banimento/demissão
+  role          String         @default("MEMBRO")
+  status        String         @default("ATIVO")
+  registrationPending Boolean  @default(false) // criado por aprovação em aula; sem login até concluir o cadastro
+  lessonGuide   Boolean        @default(false) // autorização exclusiva para postagem de aulas pelo DPE Command/System
+  coins         Int            @default(0)
+  hours         Float          @default(0) // cache agregado dos turnos (Shift) — atualizado ao fechar turno
+  followerCount Int            @default(0) // cache — atualizado ao seguir/deixar de seguir
+  profileCoverUrl String?
+
+  rankId     Int
+  rank       Rank      @relation(fields: [rankId], references: [id])
+  divisionId Int?
+  division   Division? @relation(fields: [divisionId], references: [id])
+
+  joinedAt    DateTime  @default(now())
+  rankStartedAt DateTime?
+  bannedAt     DateTime?
+  bannedUntil  DateTime? // null = banimento por tempo indeterminado
+  bannedReason String?
+  bannedBy     String?
+  lastLoginAt DateTime?
+  lastSeenAt  DateTime? // usado para calcular "online agora" (visto nos últimos N minutos)
+
+  medals               Medal[]
+  createdRequirements  Requirement[]        @relation("ReqAuthor")
+  decidedRequirements  Requirement[]        @relation("ReqDecider")
+  shifts               Shift[]
+  purchases            Purchase[]
+  posts                Post[]
+  postLikes            PostLike[]
+  postComments         PostComment[]
+  postBookmarks        PostBookmark[]
+  postReposts          PostRepost[]
+  alertMutes           OperationalAlertMute[]
+  notifications        Notification[]
+  receivedMail         MailRecipient[]
+  auditLogs            AuditLog[]           @relation("AuditActor")
+  securityEvents       SecurityEvent[]       @relation("SecurityEventMember")
+  news                 News[]
+  documents            Document[]
+  messages             Message[]
+  conversations        ConversationMember[]
+  lessonsAuthored Lesson[]
+  profilePostsAuthored ProfilePost[]         @relation("ProfilePostAuthor")
+  profilePostsReceived ProfilePost[]         @relation("ProfilePostSubject")
+  followedBy           Follow[]             @relation("Following") // quem me segue
+  following            Follow[]             @relation("Follower")  // quem eu sigo
+  dutySchedules         DutySchedule[]       @relation("DutyScheduleMember")
+  createdDutySchedules  DutySchedule[]       @relation("DutyScheduleCreator")
+  occurrenceLinks       OccurrenceMember[]
+  occurrencesCreated    Occurrence[]         @relation("OccurrenceCreator")
+  occurrencesAssigned   Occurrence[]         @relation("OccurrenceAssignee")
+  leaves                LeaveRequest[]       @relation("LeaveMember")
+  leavesCreated         LeaveRequest[]       @relation("LeaveCreator")
+  leavesDecided         LeaveRequest[]       @relation("LeaveDecider")
+  goals                  PerformanceGoal[]    @relation("GoalMember")
+  goalsCreated           PerformanceGoal[]    @relation("GoalCreator")
+  divisionLeaderships    DivisionLeader[]
+  announcementsCreated   Announcement[]        @relation("AnnouncementCreator")
+  announcementReceipts   AnnouncementReceipt[]
+  notificationPreference NotificationPreference?
+  operationsCreated       SpecialOperation[]       @relation("OperationCreator")
+  operationParticipations OperationParticipant[]
+  temporaryFunctions      TemporaryFunction[]      @relation("TempFunctionMember")
+  temporaryFunctionsCreated TemporaryFunction[]    @relation("TempFunctionCreator")
+  shiftSwapsRequested       ShiftSwapRequest[]      @relation("SwapRequester")
+  shiftSwapsOffered         ShiftSwapRequest[]      @relation("SwapOfferedTo")
+  shiftSwapsApproved        ShiftSwapRequest[]      @relation("SwapApprover")
+  trainingCoursesCreated    TrainingCourse[]        @relation("TrainingCourseCreator")
+  trainingEnrollments       TrainingEnrollment[]    @relation("TrainingMember")
+  trainingInstructed        TrainingEnrollment[]    @relation("TrainingInstructor")
+  disciplinaryActions       DisciplinaryAction[]    @relation("DisciplineMember")
+  disciplinaryCreated       DisciplinaryAction[]    @relation("DisciplineCreator")
+  recruitmentAssigned       RecruitmentCandidate[]  @relation("RecruitmentInterviewer")
+  recruitmentLinked         RecruitmentCandidate[]  @relation("RecruitmentLinkedMember")
+  institutionalEventsCreated InstitutionalEvent[]   @relation("InstitutionalEventCreator")
+  fieldChangesReceived      MemberFieldChange[]     @relation("FieldChangeTarget")
+  fieldChangesCreated       MemberFieldChange[]     @relation("FieldChangeActor")
+  missionPlansCreated       MissionPlan[]           @relation("MissionPlanCreator")
+  missionAssignments       MissionStepAssignee[]
+  careerRequirementsCreated CareerRequirement[]     @relation("CareerRequirementCreator")
+  identityCredential       IdentityCredential?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rankId])
+  @@index([divisionId])
+}
+
+// Registros públicos do perfil: "AULA" | "CERTIFICADO" | "PROMOCAO"
+model Lesson {
+  id Int @id @default(autoincrement())
+  requestKey String @unique
+  lessonDate String
+  description String
+  approved String
+  failed String
+  authorId Int
+  author Member @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+
+model ProfileDemoHidden {
+  id        Int      @id @default(autoincrement())
+  subjectId Int
+  demoKey   String
+  hiddenById Int
+  createdAt DateTime @default(now())
+
+  @@unique([subjectId, demoKey])
+  @@index([subjectId])
+}
+
+model ProfilePost {
+  lessonDate String?
+  approvedRank String?
+  id          Int      @id @default(autoincrement())
+  type        String
+  title       String
+  description String
+  authorId    Int
+  author      Member   @relation("ProfilePostAuthor", fields: [authorId], references: [id])
+  subjectId   Int
+  subject     Member   @relation("ProfilePostSubject", fields: [subjectId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([subjectId, createdAt])
+  @@index([authorId])
+}
+
+// Verificação de posse de conta: código colado na missão (motto) do Habbo
+// antes do cadastro poder definir senha e ativar o acesso ao System.
+model HabboVerification {
+  id        Int      @id @default(autoincrement())
+  habboName String
+  code      String   @unique
+  verified  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([habboName])
+}
+
+model Follow {
+  followerId  Int
+  follower    Member @relation("Follower", fields: [followerId], references: [id])
+  followingId Int
+  following   Member @relation("Following", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@id([followerId, followingId])
+}
+
+// ============================================================================
+// Condecorações
+// ============================================================================
+// duration: "PERMANENTE" | "TEMPORARIA"
+model Medal {
+  id       Int      @id @default(autoincrement())
+  memberId Int
+  member   Member   @relation(fields: [memberId], references: [id])
+  kind     String   // "Medalha de Honra", "Medalha de Mérito", "Estrela de Bravura"...
+  duration String   @default("PERMANENTE")
+  granter  String   // nome de quem concedeu (ou "DPE" para institucional)
+  endsAt   DateTime? // null = sem término
+  order    Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+  @@index([kind])
+}
+
+// ============================================================================
+// Requerimentos
+// ============================================================================
+model RequirementType {
+  id    String @id // slug: "instrucao", "promocao", "rebaixamento"...
+  name  String
+  icon  String @default("📄")
+  desc  String @default("")
+  order Int    @default(0)
+
+  requirements Requirement[]
+}
+
+// status: "PENDENTE" | "APROVADO" | "RECUSADO"
+model Requirement {
+  id         Int             @id @default(autoincrement())
+  typeId     String
+  type       RequirementType @relation(fields: [typeId], references: [id])
+  authorId   Int
+  author     Member          @relation("ReqAuthor", fields: [authorId], references: [id])
+  targetText String          // nick(s) alvo — texto livre (pode não existir como Member ainda, ex.: recruta novo)
+  reasonHtml String
+  status     String          @default("PENDENTE")
+  decidedById Int?
+  decidedBy   Member?        @relation("ReqDecider", fields: [decidedById], references: [id])
+  decidedAt   DateTime?
+  createdAt   DateTime       @default(now())
+
+  @@index([status])
+  @@index([typeId])
+}
+
+// ============================================================================
+// Turnos (presença) — horas do membro = soma dos turnos fechados
+// ============================================================================
+model Shift {
+  id        Int       @id @default(autoincrement())
+  memberId  Int
+  member    Member    @relation(fields: [memberId], references: [id])
+  startedAt        DateTime
+  endedAt          DateTime?
+  station          String    @default("Base")
+  stationStartedAt DateTime?
+  baseSeconds      Float     @default(0)
+  // Mantidos por compatibilidade com deploys intermediários. O modelo atual
+  // exibe apenas Base + setor atual e não depende destes acumuladores.
+  ocSeconds        Float     @default(0)
+  obSeconds        Float     @default(0)
+  absenceStartedAt DateTime?
+  absenceSeconds   Float     @default(0)
+  previousStation  String?
+  stationEvents    ShiftStationEvent[]
+
+  @@index([memberId])
+}
+
+model DutySchedule {
+  id          Int      @id @default(autoincrement())
+  memberId    Int
+  member      Member   @relation("DutyScheduleMember", fields: [memberId], references: [id], onDelete: Cascade)
+  createdById Int
+  createdBy   Member   @relation("DutyScheduleCreator", fields: [createdById], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime
+  note        String   @default("")
+  excused     Boolean  @default(false)
+  excuseReason String  @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([memberId, startsAt])
+  @@index([startsAt, endsAt])
+}
+
+model Occurrence {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String
+  evidence     String   @default("")
+  status       String   @default("ABERTA")
+  decision     String   @default("")
+  createdById  Int
+  createdBy    Member   @relation("OccurrenceCreator", fields: [createdById], references: [id])
+  assignedToId Int?
+  assignedTo   Member?  @relation("OccurrenceAssignee", fields: [assignedToId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  decidedAt    DateTime?
+
+  members      OccurrenceMember[]
+
+  @@index([status, createdAt])
+  @@index([assignedToId, status])
+}
+
+model OccurrenceMember {
+  occurrenceId Int
+  occurrence   Occurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  memberId     Int
+  member       Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role         String     @default("ENVOLVIDO")
+
+  @@id([occurrenceId, memberId])
+  @@index([memberId])
+}
+
+model LeaveRequest {
+  id          Int      @id @default(autoincrement())
+  memberId    Int
+  member      Member   @relation("LeaveMember", fields: [memberId], references: [id], onDelete: Cascade)
+  createdById Int
+  createdBy   Member   @relation("LeaveCreator", fields: [createdById], references: [id])
+  decidedById Int?
+  decidedBy   Member?  @relation("LeaveDecider", fields: [decidedById], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime
+  reason      String
+  status      String   @default("PENDENTE")
+  decisionNote String  @default("")
+  decidedAt   DateTime?
+  returnedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([memberId, status])
+  @@index([startsAt, endsAt])
+}
+
+model PerformanceGoal {
+  id          Int      @id @default(autoincrement())
+  memberId    Int
+  member      Member   @relation("GoalMember", fields: [memberId], references: [id], onDelete: Cascade)
+  createdById Int
+  createdBy   Member   @relation("GoalCreator", fields: [createdById], references: [id])
+  metric      String
+  targetValue Float
+  startsAt    DateTime
+  endsAt      DateTime
+  note        String   @default("")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([memberId, startsAt, endsAt])
+  @@index([active, endsAt])
+}
+
+model DivisionLeader {
+  divisionId Int
+  division   Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  memberId   Int
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  title      String   @default("Liderança")
+  createdAt  DateTime @default(now())
+
+  @@id([divisionId, memberId])
+  @@index([memberId])
+}
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  title       String
+  body        String
+  priority    String   @default("NORMAL")
+  requireAck  Boolean  @default(false)
+  scope       String   @default("ALL")
+  divisionId  Int?
+  division    Division? @relation(fields: [divisionId], references: [id])
+  createdById Int
+  createdBy   Member   @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  publishedAt DateTime @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  receipts    AnnouncementReceipt[]
+
+  @@index([publishedAt])
+  @@index([divisionId, publishedAt])
+}
+
+model AnnouncementReceipt {
+  announcementId Int
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  memberId       Int
+  member         Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  readAt         DateTime?
+  confirmedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@id([announcementId, memberId])
+  @@index([memberId, readAt])
+  @@index([announcementId, confirmedAt])
+}
+
+// ============================================================================
+// Tarefas internas
+// ============================================================================
+
+model ShiftSwapRequest {
+  id            Int      @id @default(autoincrement())
+  requesterId   Int
+  requester     Member   @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  offeredToId   Int?
+  offeredTo     Member?  @relation("SwapOfferedTo", fields: [offeredToId], references: [id])
+  approvedById  Int?
+  approvedBy    Member?  @relation("SwapApprover", fields: [approvedById], references: [id])
+  scheduleId    Int
+  reason        String
+  status        String   @default("PENDENTE")
+  responseNote  String   @default("")
+  createdAt     DateTime @default(now())
+  respondedAt   DateTime?
+  approvedAt    DateTime?
+
+  @@index([requesterId, status])
+  @@index([offeredToId, status])
+  @@index([scheduleId])
+}
+
+model TrainingCourse {
+  id               Int      @id @default(autoincrement())
+  title            String
+  description      String
+  prerequisiteText String   @default("")
+  prerequisiteId   Int?
+  prerequisite     TrainingCourse? @relation("CoursePrerequisite", fields: [prerequisiteId], references: [id])
+  dependents       TrainingCourse[] @relation("CoursePrerequisite")
+  validityDays     Int?
+  active           Boolean  @default(true)
+  createdById      Int
+  createdBy        Member   @relation("TrainingCourseCreator", fields: [createdById], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  enrollments      TrainingEnrollment[]
+  careerRequirements CareerRequirement[]
+
+  @@index([active, title])
+  @@index([prerequisiteId])
+}
+
+model TrainingEnrollment {
+  id           Int      @id @default(autoincrement())
+  courseId     Int
+  course       TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  memberId     Int
+  member       Member   @relation("TrainingMember", fields: [memberId], references: [id], onDelete: Cascade)
+  instructorId Int?
+  instructor   Member?  @relation("TrainingInstructor", fields: [instructorId], references: [id])
+  status       String   @default("MATRICULADO")
+  score        Float?
+  notes        String   @default("")
+  completedAt  DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([courseId, memberId])
+  @@index([memberId, status])
+  @@index([instructorId])
+}
+
+model DisciplinaryAction {
+  id          Int      @id @default(autoincrement())
+  memberId    Int
+  member      Member   @relation("DisciplineMember", fields: [memberId], references: [id], onDelete: Cascade)
+  createdById Int
+  createdBy   Member   @relation("DisciplineCreator", fields: [createdById], references: [id])
+  type        String
+  points      Int      @default(0)
+  reason      String
+  evidence    String   @default("")
+  startsAt    DateTime @default(now())
+  endsAt      DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([memberId, active])
+  @@index([type, createdAt])
+}
+
+model RecruitmentCandidate {
+  id              Int      @id @default(autoincrement())
+  habboName       String
+  status          String   @default("RECRUTAMENTO")
+  notes           String   @default("")
+  interviewerId   Int?
+  interviewer     Member?  @relation("RecruitmentInterviewer", fields: [interviewerId], references: [id])
+  linkedMemberId  Int?
+  linkedMember    Member?  @relation("RecruitmentLinkedMember", fields: [linkedMemberId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([habboName])
+}
+
+model InstitutionalEvent {
+  id          Int      @id @default(autoincrement())
+  title       String
+  type        String
+  description String   @default("")
+  scope       String   @default("ALL")
+  divisionId  Int?
+  division    Division? @relation(fields: [divisionId], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime?
+  createdById Int
+  createdBy   Member   @relation("InstitutionalEventCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startsAt, type])
+  @@index([divisionId, startsAt])
+}
+
+model MemberFieldChange {
+  id        Int      @id @default(autoincrement())
+  targetId  Int
+  target    Member   @relation("FieldChangeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  actorId   Int
+  actor     Member   @relation("FieldChangeActor", fields: [actorId], references: [id])
+  field     String
+  fromValue String?
+  toValue   String?
+  source    String   @default("SYSTEM")
+  createdAt DateTime @default(now())
+
+  @@index([targetId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model Task {
+  id          Int      @id @default(autoincrement())
+  groupLabel  String   // "Instrutores", "Supervisores"...
+  description String
+  done        Int      @default(0)
+  total       Int      @default(1)
+  createdAt   DateTime @default(now())
+}
+
+// ============================================================================
+// Loja
+// ============================================================================
+model ShopItem {
+  id          Int      @id @default(autoincrement())
+  code        String?  @unique
+  icon        String   @default("🎖️")
+  name        String
+  description String   @default("")
+  kind        String   @default("STANDARD")
+  imageUrl    String?
+  price       Int
+  active      Boolean  @default(true)
+
+  purchases Purchase[]
+}
+
+model Purchase {
+  id        Int      @id @default(autoincrement())
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id])
+  itemId    Int
+  item      ShopItem @relation(fields: [itemId], references: [id])
+  price     Int      // preço pago no momento da compra (histórico, mesmo se o preço do item mudar depois)
+  equipped  Boolean  @default(true) // emblemas podem ser ocultados sem apagar a compra
+  createdAt DateTime @default(now())
+
+  @@index([memberId])
+}
+
+// ============================================================================
+// RevoFeed / Cafeteria
+// ============================================================================
+// channel: "FEED" | "CAFE"
+model Post {
+  id        Int      @id @default(autoincrement())
+  authorId  Int
+  author    Member   @relation(fields: [authorId], references: [id])
+  channel   String   @default("FEED")
+  text      String
+  imageUrl  String?
+  likes     Int      @default(0) // cache para compatibilidade; PostLike impede curtidas duplicadas
+  pinned    Boolean  @default(false)
+  pinnedAt  DateTime?
+  createdAt DateTime @default(now())
+
+  likedBy   PostLike[]
+  comments  PostComment[]
+  bookmarks PostBookmark[]
+  repostedBy PostRepost[]
+
+  @@index([channel, id])
+  @@index([authorId, id])
+}
+
+model PostLike {
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([postId, memberId])
+  @@index([memberId, createdAt])
+}
+
+model PostComment {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  Int
+  author    Member   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([postId, id])
+  @@index([authorId, createdAt])
+}
+
+model PostBookmark {
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([postId, memberId])
+  @@index([memberId, createdAt])
+}
+
+model PostRepost {
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([postId, memberId])
+  @@index([memberId, createdAt])
+}
+
+// ============================================================================
+// DPE Mail — mensagens institucionais (broadcast ou individuais)
+// ============================================================================
+model MailMessage {
+  id        Int             @id @default(autoincrement())
+  fromLabel String          // "Comando DPE", "AFD", "Corregedoria"...
+  subject   String
+  body      String          
+  createdAt DateTime        @default(now())
+
+  recipients MailRecipient[]
+}
+
+model MailRecipient {
+  id        Int         @id @default(autoincrement())
+  mailId    Int
+  mail      MailMessage @relation(fields: [mailId], references: [id])
+  memberId  Int
+  member    Member      @relation(fields: [memberId], references: [id])
+  readAt    DateTime?
+
+  @@unique([mailId, memberId])
+  @@index([memberId])
+}
+
+// ============================================================================
+// Notificações
+// ============================================================================
+model Notification {
+  id        Int       @id @default(autoincrement())
+  memberId  Int
+  member    Member    @relation(fields: [memberId], references: [id])
+  icon      String    @default("🔔")
+  title     String
+  text      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([memberId])
+}
+
+model NotificationPreference {
+  memberId       Int     @id
+  member         Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  career         Boolean @default(true)
+  messages       Boolean @default(true)
+  tasks          Boolean @default(true)
+  lessons        Boolean @default(true)
+  schedules      Boolean @default(true)
+  social         Boolean @default(true)
+  announcements  Boolean @default(true)
+  administrative Boolean @default(true)
+  updatedAt      DateTime @updatedAt
+}
+
+model SpecialOperation {
+  id          Int      @id @default(autoincrement())
+  name        String
+  objective   String
+  location    String   @default("")
+  status      String   @default("PLANEJADA")
+  startsAt    DateTime
+  endsAt      DateTime?
+  startedAt   DateTime?
+  closedAt    DateTime?
+  createdById Int
+  createdBy   Member   @relation("OperationCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  participants OperationParticipant[]
+  temporaryFunctions TemporaryFunction[]
+  missionPlans MissionPlan[]
+
+  @@index([status, startsAt])
+}
+
+model OperationParticipant {
+  operationId Int
+  operation   SpecialOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  memberId    Int
+  member      Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role        String           @default("Participante")
+  joinedAt    DateTime?
+  leftAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@id([operationId, memberId])
+  @@index([memberId])
+}
+
+model TemporaryFunction {
+  id          Int      @id @default(autoincrement())
+  memberId    Int
+  member      Member   @relation("TempFunctionMember", fields: [memberId], references: [id], onDelete: Cascade)
+  createdById Int
+  createdBy   Member   @relation("TempFunctionCreator", fields: [createdById], references: [id])
+  operationId Int?
+  operation   SpecialOperation? @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @default("")
+  startsAt    DateTime
+  endsAt      DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([memberId, startsAt, endsAt])
+  @@index([operationId])
+}
+
+
+model ShiftStationEvent {
+  id        Int      @id @default(autoincrement())
+  shiftId   Int
+  shift     Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  station   String
+  enteredAt DateTime
+  leftAt    DateTime?
+  source    String   @default("SYSTEM")
+
+  @@index([shiftId, enteredAt])
+  @@index([station, enteredAt])
+}
+
+model MissionPlan {
+  id          Int      @id @default(autoincrement())
+  name        String
+  objective   String
+  description String   @default("")
+  status      String   @default("RASCUNHO")
+  startsAt    DateTime?
+  endsAt      DateTime?
+  closedAt    DateTime?
+  aarText     String   @default("")
+  operationId Int?
+  operation   SpecialOperation? @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  createdById Int
+  createdBy   Member   @relation("MissionPlanCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  steps       MissionStep[]
+
+  @@index([status, createdAt])
+  @@index([operationId])
+}
+
+model MissionStep {
+  id            Int      @id @default(autoincrement())
+  missionId     Int
+  mission       MissionPlan @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  title         String
+  description   String   @default("")
+  kind          String   @default("CHECKPOINT")
+  order         Int      @default(0)
+  status        String   @default("PENDENTE")
+  dueAt         DateTime?
+  completedAt   DateTime?
+  completedById Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  assignees     MissionStepAssignee[]
+
+  @@index([missionId, order])
+  @@index([status, dueAt])
+}
+
+model MissionStepAssignee {
+  missionStepId Int
+  missionStep   MissionStep @relation(fields: [missionStepId], references: [id], onDelete: Cascade)
+  memberId      Int
+  member        Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@id([missionStepId, memberId])
+  @@index([memberId])
+}
+
+model CareerRequirement {
+  id               Int      @id @default(autoincrement())
+  rankId           Int
+  rank             Rank     @relation(fields: [rankId], references: [id], onDelete: Cascade)
+  type             String
+  label            String
+  targetValue      Float    @default(0)
+  trainingCourseId Int?
+  trainingCourse   TrainingCourse? @relation(fields: [trainingCourseId], references: [id], onDelete: SetNull)
+  active           Boolean  @default(true)
+  order            Int      @default(0)
+  createdById      Int
+  createdBy        Member   @relation("CareerRequirementCreator", fields: [createdById], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([rankId, active, order])
+  @@index([trainingCourseId])
+}
+
+model IdentityCredential {
+  id        Int      @id @default(autoincrement())
+  memberId  Int      @unique
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  issuedAt  DateTime @default(now())
+  revokedAt DateTime?
+  updatedAt DateTime @updatedAt
+
+  @@index([token, revokedAt])
+}
+
+model OperationalAlertMute {
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  code      String
+  mutedUntil DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([memberId, code])
+  @@index([mutedUntil])
+}
+
+// ============================================================================
+// Dashboard: banners e notícias
+// ============================================================================
+model Banner {
+  id       Int     @id @default(autoincrement())
+  title    String
+  subtitle String  @default("")
+  gradient String  @default("linear-gradient(120deg,#0a1a33,#122a4d)")
+  imageUrl String?
+  order    Int     @default(0)
+  active   Boolean @default(true)
+}
+
+model News {
+  id          Int      @id @default(autoincrement())
+  title       String
+  excerpt     String   
+  authorId    Int?
+  author      Member?  @relation(fields: [authorId], references: [id])
+  readMinutes Int      @default(4)
+  views       Int      @default(0)
+  likes       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// Biblioteca institucional publicada pelo Dashboard administrativo.
+model Document {
+  id        Int      @id @default(autoincrement())
+  title     String
+  category  String   @default("Documento oficial")
+  summary   String   @default("")
+  content   String
+  icon      String   @default("📜")
+  authorId  Int
+  author    Member   @relation(fields: [authorId], references: [id])
+  divisionId Int?
+  division   Division? @relation(fields: [divisionId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([divisionId])
+}
+
+// ============================================================================
+// Conversas (chat interno — via polling REST, sem websocket nesta fase)
+// ============================================================================
+model Conversation {
+  id        Int                  @id @default(autoincrement())
+  createdAt DateTime             @default(now())
+  members   ConversationMember[]
+  messages  Message[]
+}
+
+model ConversationMember {
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  memberId       Int
+  member         Member       @relation(fields: [memberId], references: [id])
+
+  @@id([conversationId, memberId])
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  authorId       Int
+  author         Member       @relation(fields: [authorId], references: [id])
+  text           String       
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+// ============================================================================
+// Auditoria — toda ação sensível fica registrada (quem, o quê, quando)
+// ============================================================================
+model VisitLog {
+  id        Int      @id @default(autoincrement())
+  ip        String
+  page      String
+  nick      String   @default("Desconhecido")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt, id])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String   // "MEMBER_PROMOTED", "REQUIREMENT_APPROVED", "MEDAL_GRANTED"...
+  details   String?  // JSON serializado manualmente (SQLite não tem tipo Json nativo no Prisma) — ver src/utils/http.js
+  actorId   Int
+  actor     Member   @relation("AuditActor", fields: [actorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+}
+
+// Metadados mínimos de acesso para investigação de incidentes. Nunca contém
+// corpo, cabeçalhos de autenticação, cookies, tokens ou credenciais.
+model SecurityEvent {
+  id             Int      @id @default(autoincrement())
+  occurredAt     DateTime @default(now())
+  ip             String
+  proxyIp        String?
+  edgeProxyIp    String?
+  ipSource       String   @default("LEGACY")
+  userAgent      String
+  method         String
+  route          String
+  statusCode     Int
+  authResult     String
+  isBot          Boolean  @default(false)
+  botName        String?
+  memberId       Int?
+  member         Member?  @relation("SecurityEventMember", fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt, id])
+  @@index([ip, occurredAt])
+  @@index([memberId, occurredAt])
+}
+
