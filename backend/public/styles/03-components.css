@@ -1,0 +1,87 @@
+/* ============================== COMPONENTS =============================== */
+.page-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap }
+.page-head h2{ font-size:24px }
+.page-head p{ margin:5px 0 0; color:var(--muted); font-size:13px; max-width:56ch }
+
+.btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:var(--radius-sm); border:1px solid transparent;
+  font-weight:600; font-size:13px; background:var(--blue); color:#fff; transition:filter .12s,transform .06s }
+.btn:hover{ filter:brightness(1.08) }
+.btn:active{ transform:translateY(1px) }
+.btn.ghost{ background:transparent; border-color:var(--line); color:var(--text) }
+.btn.soft{ background:var(--panel-3); color:var(--text) }
+.btn.danger{ background:var(--danger) }
+.btn.small{ padding:7px 13px; font-size:12px }
+.btn.full{ width:100% ; justify-content:center}
+.btn:disabled{ opacity:.5; pointer-events:none }
+
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg); overflow:hidden }
+.card-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--line) }
+.card-head h3{ font-size:15px }
+.pad{ padding:18px }
+
+.grid{ display:grid; gap:16px }
+.grid.two{ grid-template-columns:1.6fr 1fr }
+.grid.three{ grid-template-columns:repeat(3,1fr) }
+.grid.four{ grid-template-columns:repeat(4,1fr) }
+@media (max-width:980px){ .grid.two,.grid.three,.grid.four{ grid-template-columns:1fr } }
+
+.stat{ background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px }
+.stat small{ color:var(--muted); font-size:11px }
+.stat strong{ display:block; font-size:22px; margin-top:4px; font-family:var(--font-display) }
+
+.badge{ display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:3px 9px; border-radius:99px; background:var(--panel-3); color:var(--muted) }
+.badge.blue{ background:rgba(37,99,235,.15); color:var(--blue-3) }
+.badge.green{ background:rgba(34,197,94,.14); color:var(--ok) }
+.badge.gold{ background:rgba(212,175,55,.16); color:var(--gold-2) }
+.badge.warn{ background:rgba(245,165,36,.15); color:var(--warn) }
+.badge.danger{ background:rgba(239,68,68,.15); color:var(--danger) }
+
+.input, select.input, textarea.input{
+  width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+  padding:10px 12px; border-radius:var(--radius-sm); outline:none; font-size:13px;
+}
+.input:focus{ border-color:var(--blue-2) }
+.field{ display:flex; flex-direction:column; gap:6px }
+.field label{ font-size:12px; color:var(--muted) }
+.form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px }
+@media (max-width:560px){ .form-grid{ grid-template-columns:1fr } }
+
+.table{ width:100%; border-collapse:collapse; font-size:12.5px }
+.table th{ text-align:left; color:var(--muted); font-weight:600; font-size:11px; letter-spacing:.03em; padding:10px 14px; border-bottom:1px solid var(--line) }
+.table td{ padding:12px 14px; border-bottom:1px solid var(--line-soft) }
+.table tr:last-child td{ border-bottom:none }
+.table-wrap{ overflow-x:auto }
+
+.tabs{ display:flex; gap:4px; border-bottom:1px solid var(--line); overflow-x:auto }
+.tab{ padding:10px 16px; font-size:13px; color:var(--muted); border:none; background:none; border-bottom:2px solid transparent; white-space:nowrap }
+.tab.active{ color:var(--blue-3); border-color:var(--blue) }
+
+.breadcrumb{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); margin-bottom:14px; flex-wrap:wrap }
+.breadcrumb b{ color:var(--text); font-weight:600 }
+.breadcrumb .sep{ color:var(--muted-2) }
+.crumb-btn{ background:none; border:none; color:var(--muted); padding:0; font-size:12px }
+.crumb-btn:hover{ color:var(--blue-3) }
+
+.switch{ width:38px; height:22px; border-radius:99px; background:var(--panel-3); border:1px solid var(--line); position:relative; flex:0 0 auto }
+.switch::after{ content:''; position:absolute; width:16px; height:16px; border-radius:50%; background:var(--muted); top:2px; left:2px; transition:.15s }
+.switch.on{ background:rgba(37,99,235,.3); border-color:var(--blue) }
+.switch.on::after{ left:18px; background:var(--blue-3) }
+.permission{ display:flex; align-items:center; justify-content:space-between; padding:10px 0 }
+.permission-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 20px }
+@media (max-width:640px){ .permission-grid{ grid-template-columns:1fr } }
+
+.empty{ text-align:center; padding:40px 20px; color:var(--muted) }
+.empty .ico{ font-size:32px; margin-bottom:10px }
+
+.avatar{ width:38px; height:38px; border-radius:50%; background:var(--panel-3); display:grid; place-items:center; font-size:18px; flex:0 0 auto }
+.avatar.lg{ width:64px; height:64px; font-size:30px }
+.avatar.xl{ width:96px; height:96px; font-size:44px }
+.face{ display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; background:var(--panel-3); position:relative }
+.face.online::after{ content:''; position:absolute; bottom:-1px; right:-1px; width:9px; height:9px; border-radius:50%; background:var(--ok); border:2px solid var(--panel) }
+
+.timeline{ position:relative; padding-left:22px }
+.timeline::before{ content:''; position:absolute; left:6px; top:4px; bottom:4px; width:1px; background:var(--line) }
+.timeline-item{ position:relative; padding-bottom:20px }
+.timeline-item::before{ content:''; position:absolute; left:-22px; top:3px; width:9px; height:9px; border-radius:50%; background:var(--blue); box-shadow:0 0 0 3px rgba(37,99,235,.2) }
+/* Moeda oficial do System DPE. */
+.elite-coin-icon{display:inline-block;width:1.35em;height:1.35em;object-fit:contain;vertical-align:middle}.elite-coin-amount{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:28px;margin:0;padding:0;vertical-align:middle;white-space:nowrap}.elite-coin-amount>.elite-coin-icon{display:block;width:26px;height:26px;flex:0 0 26px;margin:0;object-fit:contain}.elite-coin-copy{display:inline-flex;align-items:center;gap:5px;height:26px;margin:0;padding:0;color:var(--blue-3);font-size:14px;font-weight:600;line-height:26px}.elite-coin-copy b,.elite-coin-copy span{display:inline;margin:0;padding:0;color:inherit;font:inherit;line-height:inherit}.elite-coin-copy b{color:var(--text);font-weight:800}.tool-card .ico .elite-coin-icon{width:34px;height:34px}.req-type-card .ico .elite-coin-icon{width:26px;height:26px}
