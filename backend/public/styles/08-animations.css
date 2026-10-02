@@ -1,0 +1,281 @@
+/* ==========================================================================
+   DCC SYSTEM — animações e transições
+   IMPORTANTE: as regras de mostrar/esconder (opacity, pointer-events,
+   display) ficam SEMPRE ativas, sem depender de media query nenhuma — um
+   elemento escondido tem que continuar escondido em qualquer navegador ou
+   configuração de acessibilidade. Só a VELOCIDADE da transição respeita
+   "prefers-reduced-motion" (ver bloco no fim do arquivo), nunca o estado
+   final de visível/invisível. Essa distinção é o que quebrou antes: tudo
+   estava dentro de "no-preference", então quem usa "reduzir movimento"
+   via de tudo sobreposto e clicável, travando o site inteiro.
+   ========================================================================== */
+
+/* -------- Transição de páginas: isolada do shell/sidebar -------- */
+.app-shell{ position:relative; }
+.app-shell::before{
+  content:"";
+  position:fixed;
+  top:var(--topbar-h);
+  left:var(--sidebar-w);
+  right:0;
+  bottom:0;
+  z-index:23;
+  pointer-events:none;
+  opacity:0;
+  transform:translateX(-102%);
+  background:linear-gradient(100deg,transparent 0%,rgba(107,141,82,.035) 18%,rgba(107,141,82,.16) 46%,rgba(107,141,82,.055) 72%,transparent 100%);
+}
+.app-shell.route-switching::before{
+  animation:routeCurtain .66s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes routeCurtain{
+  0%{opacity:0;transform:translateX(-102%)}
+  18%{opacity:1}
+  58%{opacity:.95}
+  100%{opacity:0;transform:translateX(102%)}
+}
+.app-shell::after{
+  content:"";
+  position:fixed;
+  top:var(--topbar-h);
+  left:var(--sidebar-w);
+  right:0;
+  height:2px;
+  z-index:24;
+  pointer-events:none;
+  opacity:0;
+  transform:scaleX(0);
+  transform-origin:left center;
+  background:linear-gradient(90deg,var(--blue),var(--blue-3),transparent);
+}
+.app-shell.route-switching::after{
+  animation:routeProgress .68s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes routeProgress{
+  0%{opacity:0;transform:scaleX(0)}
+  14%{opacity:.95}
+  72%{opacity:.75;transform:scaleX(.82)}
+  100%{opacity:0;transform:scaleX(1)}
+}
+
+.content{
+  transition:opacity .18s ease, transform .18s cubic-bezier(.22,1,.36,1), filter .18s ease;
+  transform-origin:50% 18%;
+}
+.content.content-out{
+  opacity:.18;
+  transform:translateX(-26px) scale(.992);
+  filter:blur(2.2px);
+}
+.content.content-in{
+  animation:routeContentEnter .48s cubic-bezier(.16,1,.3,1) both;
+}
+.content.content-route-ready{ will-change:auto; }
+@keyframes routeContentEnter{
+  from{opacity:0;transform:translateX(30px) translateY(5px) scale(.992);filter:blur(2.4px)}
+  54%{filter:blur(.4px)}
+  to{opacity:1;transform:translateX(0) translateY(0) scale(1);filter:blur(0)}
+}
+.route-stagger-item{
+  animation:routeStagger .5s cubic-bezier(.16,1,.3,1) both;
+  animation-delay:var(--route-delay,0ms);
+}
+@keyframes routeStagger{
+  from{opacity:0;transform:translateY(18px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.nav-item.active .ico{ animation:navRoutePop .34s cubic-bezier(.16,1,.3,1) both; }
+@keyframes navRoutePop{
+  0%{transform:scale(.72);opacity:.45}
+  70%{transform:scale(1.12)}
+  100%{transform:scale(1);opacity:1}
+}
+@media (max-width:980px){
+  .app-shell::before,.app-shell::after{ left:0; }
+  .content.content-out{ transform:translateY(7px) scale(.997); }
+  @keyframes routeContentEnter{
+    from{opacity:0;transform:translateY(12px) scale(.996);filter:blur(1.2px)}
+    to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+  }
+}
+
+/* -------- Sidebar (mobile) + backdrop -------- */
+.sidebar{ transition: transform .32s cubic-bezier(.22,1,.36,1); }
+.sidebar-backdrop{
+  position:fixed; inset:0; background:rgba(3,7,14,.6); backdrop-filter:blur(2px);
+  z-index:65; opacity:0; pointer-events:none; transition:opacity .28s ease;
+}
+.sidebar-backdrop.show{ opacity:1; pointer-events:auto; }
+@media (min-width:981px){ .sidebar-backdrop{ display:none; } }
+
+/* -------- Modal: fade + scale-in, sem depender de display:none -------- */
+#modal{
+  opacity:0; pointer-events:none;
+  transition:opacity .2s ease;
+}
+#modal.show{ opacity:1; pointer-events:auto; }
+#modal .modal-card{
+  transform:scale(.94) translateY(14px); opacity:0;
+  transition:transform .26s cubic-bezier(.22,1,.36,1), opacity .2s ease;
+}
+#modal.show .modal-card{ transform:scale(1) translateY(0); opacity:1; }
+
+/* -------- Drawer (notificações): slide da direita -------- */
+#drawer{
+  transform:translateX(100%); pointer-events:none;
+  transition:transform .3s cubic-bezier(.22,1,.36,1);
+}
+#drawer.show{ transform:translateX(0); pointer-events:auto; }
+
+/* -------- Toast: sobe e desvanece -------- */
+#toast{
+  opacity:0; transform:translate(-50%,16px); pointer-events:none;
+  transition:opacity .22s ease, transform .28s cubic-bezier(.22,1,.36,1);
+}
+#toast.show{ opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+
+/* -------- Tela de carregamento inicial (login → dashboard) -------- */
+.boot-overlay{
+  position:fixed; inset:0; z-index:100; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  opacity:1; transition:opacity .3s ease;
+}
+.boot-overlay.hidden{ opacity:0; pointer-events:none; }
+.boot-spinner{
+  width:38px; height:38px; border-radius:50%;
+  border:3px solid var(--line); border-top-color:var(--blue-2);
+  animation:spin .8s linear infinite;
+}
+.boot-overlay p{ color:var(--muted); font-size:12.5px; letter-spacing:.02em }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* -------- Micro-interações gerais -------- */
+.btn{ transition:filter .15s ease, transform .08s ease, box-shadow .18s ease; }
+.btn:hover{ filter:brightness(1.1); box-shadow:0 8px 20px -8px rgba(37,99,235,.45); }
+.btn:active{ transform:translateY(1px) scale(.98); }
+.btn.ghost:hover{ border-color:var(--blue-dim); box-shadow:none; }
+.btn.danger:hover{ box-shadow:0 8px 20px -8px rgba(239,68,68,.5); }
+
+.icon-btn{ transition:color .15s ease, border-color .15s ease, transform .12s ease; }
+.icon-btn:active{ transform:scale(.92); }
+
+.card, .tool-card, .medal-frame, .req-letter, .req-type-card, .news-card, .shop-item, .stat{
+  transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.req-type-card:hover, .tool-card:hover, .shop-item:hover{
+  transform:translateY(-2px); border-color:var(--blue-dim); box-shadow:var(--shadow-sm);
+}
+[data-member]:hover{ transform:translateY(-2px); border-color:var(--blue-dim); box-shadow:var(--shadow-sm); cursor:pointer; }
+
+.nav-item{ transition:background .16s ease, color .16s ease, padding-left .16s ease; }
+.nav-item:hover{ padding-left:14px; }
+
+.tab{ transition:color .15s ease, border-color .2s cubic-bezier(.22,1,.36,1); }
+
+.theme-swatch{ transition:border-color .18s ease, transform .15s ease; }
+.theme-swatch:hover{ transform:translateY(-2px); }
+
+.switch::after{ transition:left .18s cubic-bezier(.22,1,.36,1), background .18s ease; }
+.switch{ transition:background .18s ease, border-color .18s ease; cursor:pointer; }
+
+.search-results{ transform-origin:top; animation:dropIn .16s cubic-bezier(.22,1,.36,1); }
+@keyframes dropIn{ from{ opacity:0; transform:scaleY(.92) translateY(-4px); } to{ opacity:1; transform:scaleY(1) translateY(0); } }
+
+.avatar, .avatar.lg, .avatar.xl, .face{ transition:transform .15s ease; }
+.card:hover .avatar.lg{ transform:scale(1.05); }
+
+.carousel-slide{ transition:opacity .3s ease; }
+.carousel-nav{ transition:background .15s ease, transform .12s ease; }
+.carousel-nav:hover{ transform:translateY(-50%) scale(1.08); }
+
+.badge{ transition:background .15s ease; }
+
+/* ==========================================================================
+   Acessibilidade: quem pede "reduzir movimento" continua vendo tudo
+   aparecer/sumir corretamente — só sem a suavidade, quase instantâneo.
+   Isso é ADITIVO (só encurta duração), nunca remove opacity/pointer-events.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .16s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .12s !important;
+    scroll-behavior: auto !important;
+  }
+  .app-shell.route-switching::before,
+  .app-shell.route-switching::after{ animation-duration:.38s !important; }
+  .content.content-in{ animation-duration:.32s !important; }
+  .route-stagger-item{ animation-duration:.30s !important; }
+}
+
+
+/* Camada visual real da troca de páginas — não depende de pseudo-elementos. */
+.route-transition{
+  position:fixed;
+  top:var(--topbar-h);
+  left:var(--sidebar-w);
+  right:0;
+  bottom:0;
+  z-index:22;
+  pointer-events:none;
+  overflow:hidden;
+  opacity:0;
+  visibility:hidden;
+}
+.route-transition.active{
+  opacity:1;
+  visibility:visible;
+}
+.route-transition-sheen{
+  position:absolute;
+  inset:0;
+  transform:translateX(-110%);
+  background:
+    linear-gradient(105deg,
+      transparent 0%,
+      rgba(33,70,44,.04) 20%,
+      rgba(72,112,78,.24) 48%,
+      rgba(133,163,111,.11) 66%,
+      transparent 100%);
+  backdrop-filter:blur(.8px);
+}
+.route-transition.active .route-transition-sheen{
+  animation:dpeRouteSheen .64s cubic-bezier(.16,1,.3,1) both;
+}
+.route-transition-progress{
+  position:absolute;
+  top:0;
+  left:0;
+  height:3px;
+  width:100%;
+  transform:scaleX(0);
+  transform-origin:left center;
+  background:linear-gradient(90deg,#6f915d,#a6bd8e,#d7e4ca);
+  box-shadow:0 0 12px rgba(105,145,84,.36);
+}
+.route-transition.active .route-transition-progress{
+  animation:dpeRouteBar .66s cubic-bezier(.16,1,.3,1) both;
+}
+.route-transition.leaving{
+  opacity:0;
+  transition:opacity .24s ease;
+}
+@keyframes dpeRouteSheen{
+  0%{transform:translateX(-110%);opacity:0}
+  12%{opacity:1}
+  72%{opacity:.9}
+  100%{transform:translateX(110%);opacity:0}
+}
+@keyframes dpeRouteBar{
+  0%{transform:scaleX(0);opacity:0}
+  10%{opacity:1}
+  78%{transform:scaleX(.86);opacity:1}
+  100%{transform:scaleX(1);opacity:0}
+}
+@media(max-width:980px){
+  .route-transition{left:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .route-transition.active .route-transition-sheen{animation-duration:.36s!important}
+  .route-transition.active .route-transition-progress{animation-duration:.38s!important}
+}
