@@ -1,0 +1,44 @@
+name: System DPE CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
+
+      - name: Gerar Prisma Client
+        run: npx prisma generate --schema backend/prisma/schema.prisma
+
+      - name: Testes do System
+        run: npm test
+
+      - name: Python 3.12
+        if: ${{ hashFiles('dpe-command/dpe_command.py') != '' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validar DPE Command
+        if: ${{ hashFiles('dpe-command/dpe_command.py') != '' }}
+        run: python -m py_compile dpe-command/dpe_command.py
