@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>System DPE</title>
+<link rel="icon" href="/assets/login/brasao-dpe-v2.png" />
+<link rel="preload" href="/assets/login/brasao-dpe-v2.png" as="image" type="image/png" fetchpriority="high" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/00-tokens.css" />
+<link rel="stylesheet" href="styles/01-login.css" />
+<link rel="stylesheet" href="styles/02-shell.css?v=20260930-shellfix2" />
+<link rel="stylesheet" href="styles/03-components.css?v=20260924-6" />
+<link rel="stylesheet" href="styles/04-dashboard.css" />
+<link rel="stylesheet" href="styles/05-medals-ranks-reqs.css" />
+<link rel="stylesheet" href="styles/06-modules.css?v=20260926-turnos2" />
+<link rel="stylesheet" href="styles/07-responsive.css" />
+<link rel="stylesheet" href="styles/08-animations.css?v=20261001-motion6">
+<link rel="stylesheet" href="styles/09-dpe-interior.css?v=20261001-nexus1-members-photo1" />
+<link rel="stylesheet" href="styles/10-rede-dpe.css?v=20260930-social2" />
+</head>
+<body>
+
+  <!-- ============================== LOGIN ============================== -->
+  <div id="loginView" class="login-view">
+    <header class="dpe-header">
+      <a class="dpe-brand" href="#" aria-label="System DPE — início"><img src="/assets/login/brasao-dpe-v2.png" alt="Brasão da Polícia DPE" width="118" height="107" fetchpriority="high" decoding="async"><span><b>POLÍCIA DPE</b><small>CORPORAÇÃO HABBO</small></span></a>
+      <span class="dpe-portal">PORTAL DA CORPORAÇÃO</span>
+    </header>
+    <main class="dpe-login-layout">
+      <section class="dpe-command" aria-labelledby="commandTitle">
+        <p class="dpe-eyebrow">COMANDO SUPREMO</p>
+        <h1 id="commandTitle">DISCIPLINA.<br>HONRA. UNIÃO.</h1>
+        <p class="dpe-motto">Três Supremos. Um só propósito.</p>
+        <div class="dpe-supremos" aria-label="Os três Supremos da Polícia DPE">
+          <figure><img src="/assets/login/brasa.png" alt="Supremo Brasa com medalha" width="128" height="220" decoding="async"><span class="dpe-podium" aria-hidden="true"></span></figure>
+          <figure><img src="/assets/login/japinha.png" alt="Supremo Japinha ao centro" width="128" height="220" decoding="async"><span class="dpe-podium" aria-hidden="true"></span></figure>
+          <figure><img src="/assets/login/mikeg0d.png" alt="Supremo MikeG0D com medalha" width="128" height="220" decoding="async"><span class="dpe-podium" aria-hidden="true"></span></figure>
+        </div>
+        <p class="dpe-supremacy"><span>A SUPREMACIA</span></p>
+      </section>
+      <section class="dpe-access" aria-labelledby="loginTitle">
+        <!-- Form animation adapted from Uiverse.io by Novaxlo. -->
+        <form id="loginForm" class="dpe-form">
+          <div class="dpe-login-heading" id="login-area"><h2 id="loginTitle">LOGIN</h2></div>
+          <div class="dpe-welcome"><h3>Bem-vindo à DPE.</h3><p>Sua corporação, em um só lugar.</p></div>
+          <div class="dpe-form-area" id="email-area">
+            <label for="loginUser">Nick no Habbo</label>
+            <input id="loginUser" name="username" placeholder="DIGITE SEU NICK" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="100">
+          </div>
+          <div class="dpe-form-area" id="password-area">
+            <label for="loginPass">Senha do System</label>
+            <div class="dpe-password"><input id="loginPass" name="password" type="password" placeholder="DIGITE SUA SENHA" autocomplete="current-password" required><button type="button" id="togglePassword" aria-label="Mostrar senha" aria-pressed="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            <div class="dpe-options"><label for="remember"><input type="checkbox" id="remember"> Manter conectado</label><button type="button" id="forgotPassword">Esqueci minha senha</button></div>
+          </div>
+          <div class="dpe-form-area" id="footer-area">
+            <button class="dpe-submit" type="submit">Entrar no System</button>
+            <p class="dpe-signup">Primeiro acesso? <button type="button" id="activateBtn">Criar conta</button></p>
+          </div>
+          <p id="loginMsg" class="form-msg" role="status" aria-live="polite"></p>
+          <p class="dpe-security"><svg width="16" height="18" viewBox="0 0 16 18" fill="none" stroke="currentColor" aria-hidden="true"><rect x="2" y="8" width="12" height="9" rx="1"/><path d="M4 8V5a4 4 0 0 1 8 0v3"/></svg>Sua senha do Habbo nunca é solicitada.</p>
+          <div id="background-color" aria-hidden="true"></div><div id="whitefilter" aria-hidden="true"></div>
+        </form>
+      </section>
+    </main>
+    <footer class="dpe-footer"><b>SYSTEM DPE</b><p>System desenvolvido por <strong>Mux</strong> e <strong>MikeG0D</strong></p><small>Projeto independente, sem afiliação à Sulake.</small></footer>
+  </div>
+
+  <!-- ============================== APP ============================== -->
+  <div id="systemView" class="system hidden">
+    <aside class="sidebar" id="sidebar">
+      <a class="side-brand" href="#dashboard"><img src="/assets/login/brasao-dpe-v2.png" alt="Brasão DPE" decoding="async"><span><strong>System DPE</strong><small>DISCIPLINA · HONRA · UNIÃO</small></span></a>
+      <button class="side-profile" id="sideProfileBtn" aria-label="Abrir meu perfil"><span class="side-avatar" id="sideAvatar"></span><strong id="sideName"></strong><span id="sideRank"></span><small id="sideRole"></small></button>
+      <nav id="nav"></nav>
+      <div class="side-footer"><img src="/assets/login/brasao-dpe-v2.png" alt="" decoding="async"><span>POLÍCIA DPE<small>Juntos pela corporação.</small></span></div>
+    </aside>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="icon-btn menu-only" id="menuBtn" title="Menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar">☰</button>
+        <div class="global-search">
+          <span>⌕</span>
+          <input id="globalSearch" placeholder="Buscar ou comandar…  Ctrl+K" aria-label="Buscar no System">
+          <div id="searchResults" class="search-results hidden"></div>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn top-action-with-badge" id="topNotifBtn" title="Notificações" aria-label="Abrir notificações">🔔<span class="top-action-badge hidden" id="topNotifBadge">0</span></button>
+          <button class="icon-btn top-action-with-badge" id="topMailBtn" title="Mensagens" aria-label="Abrir mensagens">✉<span class="top-action-badge hidden" id="topMailBadge">0</span></button>
+        </div>
+      </header>
+      <div id="routeTransition" class="route-transition" aria-hidden="true">
+        <div class="route-transition-sheen"></div>
+        <div class="route-transition-progress"></div>
+      </div>
+      <main id="content" class="content"></main>
+    </div>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  </div>
+
+  <!-- Tela de carregamento entre "login confirmado" e "dados prontos" —
+       evita mostrar o dashboard pela metade enquanto a API ainda responde. -->
+  <div id="bootOverlay" class="boot-overlay hidden">
+    <div class="boot-spinner"></div>
+    <p>Carregando o System DPE...</p>
+  </div>
+
+  <!-- Modal/drawer/toast ficam FORA do systemView de propósito: assim
+       funcionam mesmo na tela de login (ex.: fluxo de Ativar Conta), e não
+       só depois de autenticado. A visibilidade deles agora é 100% via CSS
+       (classe .show), não via .hidden — assim dá pra animar entrada/saída. -->
+  <div id="drawer" class="drawer hidden"></div>
+  <div id="modal" class="modal hidden"><div class="modal-card" id="modalCard"></div></div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="scripts/01-core.js?v=20260930-overlayfix2"></script>
+  <script src="scripts/02-data.js?v=20260930-persona1"></script>
+  <script src="scripts/03-nav.js?v=20261001-nexus1"></script>
+  <script src="scripts/04-dashboard.js?v=20260930-persona1"></script>
+  <script src="scripts/05-members.js?v=20261001-members-photo1"></script>
+  <script src="scripts/06-medals-rankings.js"></script>
+  <script src="scripts/07-requirements.js"></script>
+  <script src="scripts/08-admin.js?v=20260930-final3"></script>
+  <script src="scripts/09-social.js?v=20260930-social2"></script>
+  <script src="scripts/10-profile.js?v=20260930-cases1"></script>
+  <script src="scripts/11-settings.js?v=20260930-notif1"></script>
+  <script src="scripts/13-activation.js"></script>
+  <script src="scripts/14-animations.js?v=20261001-motion6"></script>
+  <script src="scripts/15-login.js"></script>
+  <script src="scripts/16-access-dashboard.js"></script>
+  <script src="scripts/18-security-events.js?v=20260930-sec1"></script>
+  <script src="scripts/19-system-health.js?v=20260930-final3"></script>
+  <script src="scripts/20-command-center.js?v=20260930-alerts1"></script>
+  <script src="scripts/21-lessons-overview.js?v=20260930-lessons2"></script>
+  <script src="scripts/22-schedules.js?v=20260930-smart1"></script>
+  <script src="scripts/23-supreme-investigation.js?v=20260930-supreme1"></script>
+  <script src="scripts/24-occurrences-leaves.js?v=20260930-phase33"></script>
+  <script src="scripts/25-goals.js?v=20260930-goals1"></script>
+  <script src="scripts/26-divisions-announcements.js?v=20260930-phase33"></script>
+  <script src="scripts/27-reports.js?v=20260930-reports1"></script>
+  <script src="scripts/28-operations-functions.js?v=20260930-ops1"></script>
+  <script src="scripts/29-phase33.js?v=20260930-phase33"></script>\n  <script src="scripts/30-nexus.js?v=20261001-nexus1"></script>
+  <script src="scripts/requests.js?v=20261001-nexus1"></script>
+  <script src="scripts/12-main.js?v=20261001-nexus1"></script>
+</body>
+</html>
+
+
